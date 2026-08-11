@@ -2,21 +2,22 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4  # 👈 Обновлено до v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5  # 👈 Обновлено до v5
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
           cache: maven
 
@@ -30,47 +31,41 @@ jobs:
         run: mvn package -DskipTests
 
       - name: Upload JAR artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4 # 👈 Обновлено до v4
         with:
           name: todo-app
           path: target/todo-app-*.jar
 
-  deploy:
+  build-and-push-docker:
     needs: build-and-test
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4  # 👈 Обновлено до v4
 
       - name: Download JAR artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4 # 👈 Обновлено до v4
         with:
           name: todo-app
           path: target/
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/todo-app:latest
-
-      - name: Deploy to VM
-        uses: appleboy/ssh-action@v0.1.5
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USERNAME }}
-          key: ${{ secrets.VM_SSH_KEY }}
-          script: |
-            docker pull ${{ secrets.DOCKER_USERNAME }}/todo-app:latest
-            docker stop todo-app || true
-            docker rm todo-app || true
-            docker run -d --name todo-app -p 8080:8080 --restart unless-stopped ${{ secrets.DOCKER_USERNAME }}/todo-app:latest
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/todo-app:latest
+            ${{ secrets.DOCKER_USERNAME }}/todo-app:${{ github.sha }}
