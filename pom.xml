@@ -82,13 +82,16 @@
 			<plugin>
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
-				<version>${jacoco.version}</version>
+				<version>0.8.10</version>
 				<executions>
+					<!-- Подготавливает агент для сбора данных о покрытии -->
 					<execution>
+						<id>prepare-agent</id>
 						<goals>
 							<goal>prepare-agent</goal>
 						</goals>
 					</execution>
+					<!-- Создает отчет после запуска тестов -->
 					<execution>
 						<id>report</id>
 						<phase>test</phase>
@@ -96,6 +99,7 @@
 							<goal>report</goal>
 						</goals>
 					</execution>
+					<!-- Проверяет покрытие по правилам -->
 					<execution>
 						<id>check</id>
 						<goals>
@@ -109,7 +113,7 @@
 										<limit>
 											<counter>INSTRUCTION</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.70</minimum>
+											<minimum>0.70</minimum> <!-- Минимальный порог 70% -->
 										</limit>
 									</limits>
 								</rule>
